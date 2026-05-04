@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Engine Cold Start Videos</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+  <style>
+    body { font-family: Arial; background:#111; color:#fff; text-align:center; }
+    video { width:300px; border-radius:10px; margin:10px; }
+    button { padding:10px; margin:10px; }
+  </style>
+</head>
+<body>
+
+<h1>Engine Cold Start Videos</h1>
+
+<input type="file" id="upload" accept="video/*">
+<button onclick="uploadVideo()">Upload</button>
+
+<div id="videos"></div>
+
+<script>
+// 🔴 PASTE YOUR FIREBASE CONFIG HERE
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+// Init Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const storage = firebase.storage();
+const db = firebase.firestore();
+
+// Upload video
+async function uploadVideo() {
+  const file = document.getElementById('upload').files[0];
+  if (!file) return alert('Select a video');
+
+  const storageRef = storage.ref('videos/' + file.name);
+  await storageRef.put(file);
+
+  const url = await storageRef.getDownloadURL();
+
+  await db.collection('videos').add({
+    url: url,
+    name: file.name,
+    created: Date.now()
+  });
+
+  loadVideos();
+}
+
+// Load videos
+async function loadVideos() {
+  const container = document.getElementById('videos');
+  container.innerHTML = '';
+
+  const snapshot = await db.collection('videos').orderBy('created', 'desc').get();
+
+  snapshot.forEach(doc => {
+    const vid = doc.data();
+
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <video controls src="${vid.url}"></video><br>
+      <a href="${vid.url}" download="${vid.name}">
+        <button>Download</button>
+      </a>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+loadVideos();
+</script>
+
+</body>
+</html>
